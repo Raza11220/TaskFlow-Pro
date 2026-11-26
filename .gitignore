@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+
+# Cache
+.cache/
+.vite/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
