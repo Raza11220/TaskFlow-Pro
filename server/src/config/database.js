@@ -1,21 +1,21 @@
 import mongoose from 'mongoose';
 
+let connectionPromise;
+
 const connectDatabase = async () => {
-  try {
-    const connection = await mongoose.connect(
-      process.env.MONGODB_URI
-    );
+  if (mongoose.connection.readyState === 1) return mongoose;
 
-    console.log(
-      `MongoDB connected: ${connection.connection.host}`
-    );
-  } catch (error) {
-    console.error(
-      `MongoDB connection failed: ${error.message}`
-    );
-
-    process.exit(1);
+  // Concurrent requests in a warm function share one connection attempt/pool.
+  if (!connectionPromise) {
+    connectionPromise = mongoose.connect(process.env.MONGODB_URI, {
+      maxPoolSize: 5,
+      serverSelectionTimeoutMS: 10000,
+    }).finally(() => {
+      connectionPromise = undefined;
+    });
   }
+
+  return connectionPromise;
 };
 
 export default connectDatabase;

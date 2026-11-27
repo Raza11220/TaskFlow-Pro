@@ -1,6 +1,7 @@
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import env from './env.js';
+import { fileURLToPath } from 'node:url';
 
 const options = {
   definition: {
@@ -31,7 +32,7 @@ const options = {
     },
     security: [{ BearerAuth: [] }],
   },
-  apis: ['./src/routes/*.js'],
+  apis: [fileURLToPath(new URL('../routes/*.js', import.meta.url)).replaceAll('\\', '/')],
 };
 
 const swaggerSpec = swaggerJsDoc(options);

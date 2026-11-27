@@ -98,16 +98,18 @@ The login page currently offers email/password authentication; Google sign-in is
 
 ## 🌐 Deploying to Vercel
 
-Create a Vercel project from the repository and set **Root Directory** to `client`. The included `vercel.json` builds with `npm run build`, serves `dist`, and routes SPA paths to `index.html`.
+Deploy the backend as a separate Vercel project first. Replace `https://taskflow-pro-api.vercel.app` in `client/vercel.json` with its actual production origin. The `/api/:path*` proxy must precede the SPA rewrite so cookie-based REST authentication works on the frontend's free domain.
 
-Set these Production environment variables before deploying (replace the hostname with your Render API service):
+Import the repository as a Vercel project with **Root Directory `client`**, **Framework Preset Vite**, and **Node.js 22.x**. The included `vercel.json` builds with `npm run build`, serves `dist`, and handles deep-link refreshes.
 
-| Variable | Example |
+| Production variable | Value |
 |---|---|
-| `VITE_API_URL` | `https://taskflow-pro-api.onrender.com/api/v1` |
-| `VITE_SOCKET_URL` | `https://taskflow-pro-api.onrender.com` |
+| `VITE_API_URL` | `/api/v1` |
+| `VITE_SOCKET_URL` | `https://<actual-backend-project>.vercel.app` |
 
-These are embedded at build time, so redeploy after changing them. For reliable cookie-based authentication, use a custom frontend domain and API subdomain on the same registrable domain; browser third-party-cookie restrictions can interfere with the default Vercel/Render domains. See the root README for the full Atlas + Render + Vercel checklist.
+Vite variables are embedded at build time. Redeploy after changing them or the proxy destination. Do not use localhost values in Vercel. Without `VITE_API_URL`, production builds default to `/api/v1`; local development keeps `http://localhost:5000/api/v1`.
+
+Update backend `CLIENT_URL` to the actual frontend origin and redeploy the backend. WebSocket connections go directly to the backend with a token fetched through the REST proxy; verify Vercel's WebSocket beta and multi-browser chat on your deployment. See the [root README](../README.md) for the complete Vercel + Atlas setup and production smoke tests.
 
 ---
 

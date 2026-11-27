@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 
 // Base API instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:5000/api/v1'),
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,

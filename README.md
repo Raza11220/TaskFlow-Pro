@@ -133,23 +133,56 @@ Run frontend tests from the client directory with `npm exec -- vitest run`.
 
 ---
 
-## 🚀 Production Deployment (Vercel + Render + MongoDB Atlas)
+## 🚀 Deployment (Vercel Hobby + MongoDB Atlas)
 
-Deployment configuration is included in [`render.yaml`](./render.yaml) for the API and [`client/vercel.json`](./client/vercel.json) for the Vite single-page app. These files prepare the services; they do not create accounts, provision MongoDB, or deploy anything.
+The client and server deploy as **two Vercel projects from this repository**. Use the Hobby plan within its current usage and eligibility limits; MongoDB Atlas has a separate free cluster option. Configuration alone does not deploy the app or prove production readiness.
 
-1. Create a MongoDB Atlas production cluster and database. Add a database user and allow network access only from the Render service's outbound IP addresses where your Render plan provides stable egress IPs. Do not use an unrestricted `0.0.0.0/0` rule for production. Keep the connection string private and URL-encode special characters in its password.
-2. Import this repository into Render and deploy the Blueprint from `render.yaml`. In the service environment, provide:
-   - `MONGODB_URI`: the Atlas connection string for the production database.
-   - `CLIENT_URL`: the exact deployed frontend origin, such as `https://your-app.vercel.app` (no trailing slash).
-   - `API_BASE_URL`: the Render API origin, such as `https://taskflow-pro-api.onrender.com` (no `/api/v1` suffix).
-   - Render generates `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` for the service.
-3. Create a Vercel project from this repository and set its **Root Directory** to `client`. Configure these build-time environment variables for Production:
-   - `VITE_API_URL`: `https://<your-render-service>.onrender.com/api/v1`
-   - `VITE_SOCKET_URL`: `https://<your-render-service>.onrender.com`
-   Deploy the frontend, then update Render's `CLIENT_URL` to the actual Vercel origin. Redeploy the frontend if its environment variables change.
-4. Verify the API at `/api/health`, `/api/ready`, and `/api/docs`, then test sign-in, refresh after reload, workspace data, file upload if configured, and live chat/socket reconnection.
+### 1. Deploy the backend
 
-**Important production limits:** Vercel and Render default domains are different sites. This app authenticates with `HttpOnly` cookies, so browsers that block third-party cookies may prevent login/refresh from working across those domains. Use a custom domain with frontend and API subdomains on the same registrable domain (for example `app.example.com` and `api.example.com`) for reliable production authentication; configure the exact frontend origin in `CLIENT_URL` and use the API subdomain in both Vite variables. Password-reset and invitation emails also require working `SMTP_*` settings, and cloud file uploads require `CLOUDINARY_*`. Never commit production credentials or copy a local `.env` into the repository.
+1. Create an Atlas cluster and database user. Store the private connection string as `MONGODB_URI`. Configure Atlas Network Access so Vercel functions can connect; Hobby does not provide a dedicated static egress IP. An allow-from-anywhere rule broadens database exposure, so use strong unique credentials and review the network setup before production.
+2. Import the repository into Vercel. Use project name `taskflow-pro-api` (or your own), **Root Directory: `server`**, **Framework Preset: Other**, and **Node.js: 22.x**. Keep the included `server/vercel.json`; leave Build Command and Output Directory overrides disabled. The API is a Node function, not a static build, and does not need `npm start`.
+3. Add these **Production** environment variables in Vercel:
+
+   | Variable | Value |
+   |---|---|
+   | `NODE_ENV` | `production` |
+   | `MONGODB_URI` | Private Atlas connection string |
+   | `CLIENT_URL` | Exact frontend origin, e.g. `https://taskflow-pro.vercel.app`, without trailing slash; update after deploying the client |
+   | `API_BASE_URL` | Actual backend origin, e.g. `https://taskflow-pro-api.vercel.app`, without `/api/v1` |
+   | `JWT_ACCESS_SECRET` | A private random secret, at least 32 characters |
+   | `JWT_REFRESH_SECRET` | A different private random secret, at least 32 characters |
+   | `CRON_SECRET` | Another private random secret, at least 32 characters, for the daily job |
+   | `MAX_FILE_SIZE_MB` | `4` (leave room for multipart overhead under the Hobby request limit) |
+
+   Generate each secret separately with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Configure `SMTP_*` for reset/invitation emails and `CLOUDINARY_*` for hosted file uploads. Keep secrets in Vercel settings; never commit `.env`.
+4. Deploy and copy the actual production backend URL. Make the production API publicly reachable by the client; Vercel deployment protection must not block normal application requests. Preview deployments are not configured as production frontends.
+
+### 2. Deploy the frontend
+
+1. In `client/vercel.json`, replace `https://taskflow-pro-api.vercel.app` in the `/api/:path*` rewrite with your **actual backend production origin**. Vite environment variables do not substitute into this JSON file.
+2. Import the same repository as another Vercel project, **Root Directory: `client`**, **Framework Preset: Vite**, **Node.js: 22.x**. Build command is `npm run build`; output is `dist`.
+3. Set **Production** `VITE_API_URL=/api/v1` and `VITE_SOCKET_URL=https://<actual-backend-project>.vercel.app`. Do not copy the localhost values from `client/.env` into Vercel.
+4. Deploy the client, update backend `CLIENT_URL` to its actual frontend origin, then redeploy the backend. Redeploy the client whenever its Vite variables or rewrite destination change.
+
+The frontend `/api/*` rewrite proxies requests to the server before the SPA fallback. REST authentication cookies are therefore first-party on the frontend domain, including free `vercel.app` domains. Socket.IO connects directly to `VITE_SOCKET_URL` with the token obtained through the REST proxy.
+
+### 3. Scheduled jobs, live chat, and limits
+
+- The Vercel entry point `server/api/index.js` exports the HTTP server without opening a listener or starting `node-cron`. MongoDB connections are reused across warm requests; failed attempts can retry. Local `npm run dev` / `npm start` still use the regular listener and timers.
+- One authenticated Vercel Cron request to `/api/jobs/daily` runs snapshots, overdue reminders, and invitation cleanup daily at `04:00 UTC` (approximately `09:00 Asia/Karachi`). Set `CRON_SECRET` before deploying. Hobby timing is approximate; the deployed schedule combines the three jobs into one daily run. Large datasets can exceed function duration limits and need batched processing.
+- Vercel currently documents WebSocket and Socket.IO support in **Public Beta**. The backend exports its HTTP server and uses WebSocket-only transport on Vercel. Verify availability and reconnection on the deployed account. Socket.IO rooms and rate limits are in memory per function instance; broadcasts across multiple instances require a shared adapter/store before promising reliable scaled real-time delivery.
+- Hobby functions accept request bodies up to **4.5 MB**, including multipart/base64 overhead; the old local 10 MB upload setting cannot bypass this. For larger files, implement direct-to-cloud uploads. Cloudinary and email providers have their own quotas.
+- Review current [Hobby plan limits](https://vercel.com/docs/plans/hobby), [WebSocket support](https://vercel.com/changelog/websocket-support-is-now-in-public-beta), [function limits](https://vercel.com/docs/functions/limitations), and [daily cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing) before deploying.
+
+### 4. Production smoke tests
+
+1. Open backend `/api/health`, `/api/ready`, `/api/docs`, and `/api/docs.json`; readiness must report a connected database and Swagger must list the routes.
+2. Open frontend `/api/health` and a deep link such as `/login` directly; both the proxy and SPA refresh must work.
+3. Register, sign in, create a workspace/project/task, reload a protected page, refresh the session, and sign out. Confirm cookies persist through the frontend origin without third-party-cookie exceptions.
+4. Test chat between two signed-in browsers, typing events, and reconnection. Check for dropped cross-instance broadcasts.
+5. Test configured email and file-upload flows. Check Vercel Cron execution logs and confirm that `/api/jobs/daily` rejects requests without its bearer secret.
+
+Only describe the app as fully production-ready after actual deployment and the relevant production smoke tests pass.
 
 ---
 

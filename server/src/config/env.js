@@ -6,6 +6,7 @@ dotenv.config();
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(5000),
+  CRON_SECRET: z.string().optional().default(''),
   CLIENT_URL: z.string().default('http://localhost:5173'),
   API_BASE_URL: z.string().default('http://localhost:5000'),
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
@@ -25,7 +26,7 @@ const envSchema = z.object({
   APP_NAME: z.string().default('TaskFlow Pro'),
   APP_TIMEZONE: z.string().default('Asia/Karachi'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']).default('info'),
-  MAX_FILE_SIZE_MB: z.coerce.number().default(10),
+  MAX_FILE_SIZE_MB: z.coerce.number().default(process.env.VERCEL ? 4 : 10),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

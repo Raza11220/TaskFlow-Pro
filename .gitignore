@@ -20,6 +20,7 @@ coverage/
 # Cache
 .cache/
 .vite/
+.vercel/
 
 # Operating system
 .DS_Store
