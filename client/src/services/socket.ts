@@ -1,9 +1,17 @@
 // ─── Socket.IO Client ──────────────────────────────────────────────────────────
 import { io, Socket } from 'socket.io-client'
+import { authService } from './auth.service'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 
 let socket: Socket | null = null
+let activeOrganizationId: string | null = null
+
+const joinOrganization = (): void => {
+  if (activeOrganizationId) {
+    socket?.emit('org:join', { organizationId: activeOrganizationId })
+  }
+}
 
 export const getSocket = (): Socket => {
   if (!socket) {
@@ -11,26 +19,32 @@ export const getSocket = (): Socket => {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: false,
+      auth: (callback) => {
+        void authService
+          .refresh()
+          .then((token) => callback({ token }))
+          .catch((error: unknown) => {
+            console.error('Socket authentication failed', error)
+            callback({})
+          })
+      },
     })
+    socket.on('connect', joinOrganization)
   }
   return socket
 }
 
 export const connectSocket = (organizationId: string): Socket => {
   const s = getSocket()
-  if (!s.connected) {
-    s.connect()
-    s.on('connect', () => {
-      s.emit('org:join', { organizationId })
-    })
-  }
+  activeOrganizationId = organizationId
+  if (s.connected) joinOrganization()
+  else s.connect()
   return s
 }
 
 export const disconnectSocket = (): void => {
-  if (socket?.connected) {
-    socket.disconnect()
-  }
+  activeOrganizationId = null
+  socket?.disconnect()
 }
 
 export const joinConversation = (conversationId: string): void => {

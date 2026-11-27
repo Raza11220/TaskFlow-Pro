@@ -96,6 +96,21 @@ The login page currently offers email/password authentication; Google sign-in is
 
 ---
 
+## 🌐 Deploying to Vercel
+
+Create a Vercel project from the repository and set **Root Directory** to `client`. The included `vercel.json` builds with `npm run build`, serves `dist`, and routes SPA paths to `index.html`.
+
+Set these Production environment variables before deploying (replace the hostname with your Render API service):
+
+| Variable | Example |
+|---|---|
+| `VITE_API_URL` | `https://taskflow-pro-api.onrender.com/api/v1` |
+| `VITE_SOCKET_URL` | `https://taskflow-pro-api.onrender.com` |
+
+These are embedded at build time, so redeploy after changing them. For reliable cookie-based authentication, use a custom frontend domain and API subdomain on the same registrable domain; browser third-party-cookie restrictions can interfere with the default Vercel/Render domains. See the root README for the full Atlas + Render + Vercel checklist.
+
+---
+
 ## 🧰 5. Frontend Tech Stack
 
 - **Core**: React 19, TypeScript, Vite 8

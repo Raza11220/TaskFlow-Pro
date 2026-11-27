@@ -133,6 +133,26 @@ Run frontend tests from the client directory with `npm exec -- vitest run`.
 
 ---
 
+## 🚀 Production Deployment (Vercel + Render + MongoDB Atlas)
+
+Deployment configuration is included in [`render.yaml`](./render.yaml) for the API and [`client/vercel.json`](./client/vercel.json) for the Vite single-page app. These files prepare the services; they do not create accounts, provision MongoDB, or deploy anything.
+
+1. Create a MongoDB Atlas production cluster and database. Add a database user and allow network access only from the Render service's outbound IP addresses where your Render plan provides stable egress IPs. Do not use an unrestricted `0.0.0.0/0` rule for production. Keep the connection string private and URL-encode special characters in its password.
+2. Import this repository into Render and deploy the Blueprint from `render.yaml`. In the service environment, provide:
+   - `MONGODB_URI`: the Atlas connection string for the production database.
+   - `CLIENT_URL`: the exact deployed frontend origin, such as `https://your-app.vercel.app` (no trailing slash).
+   - `API_BASE_URL`: the Render API origin, such as `https://taskflow-pro-api.onrender.com` (no `/api/v1` suffix).
+   - Render generates `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` for the service.
+3. Create a Vercel project from this repository and set its **Root Directory** to `client`. Configure these build-time environment variables for Production:
+   - `VITE_API_URL`: `https://<your-render-service>.onrender.com/api/v1`
+   - `VITE_SOCKET_URL`: `https://<your-render-service>.onrender.com`
+   Deploy the frontend, then update Render's `CLIENT_URL` to the actual Vercel origin. Redeploy the frontend if its environment variables change.
+4. Verify the API at `/api/health`, `/api/ready`, and `/api/docs`, then test sign-in, refresh after reload, workspace data, file upload if configured, and live chat/socket reconnection.
+
+**Important production limits:** Vercel and Render default domains are different sites. This app authenticates with `HttpOnly` cookies, so browsers that block third-party cookies may prevent login/refresh from working across those domains. Use a custom domain with frontend and API subdomains on the same registrable domain (for example `app.example.com` and `api.example.com`) for reliable production authentication; configure the exact frontend origin in `CLIENT_URL` and use the API subdomain in both Vite variables. Password-reset and invitation emails also require working `SMTP_*` settings, and cloud file uploads require `CLOUDINARY_*`. Never commit production credentials or copy a local `.env` into the repository.
+
+---
+
 ## 📖 Detailed Documentation
 
 - 🎨 [**Frontend Documentation (`client/README.md`)**](./client/README.md)

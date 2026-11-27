@@ -1,5 +1,5 @@
 // ─── Auth Service ──────────────────────────────────────────────────────────────
-import api from './api'
+import api, { refreshAccessToken } from './api'
 
 export interface LoginPayload {
   email: string
@@ -72,8 +72,8 @@ export const authService = {
     await api.post('/auth/logout')
   },
 
-  async refresh(): Promise<void> {
-    await api.post('/auth/refresh')
+  async refresh(): Promise<string> {
+    return refreshAccessToken()
   },
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {

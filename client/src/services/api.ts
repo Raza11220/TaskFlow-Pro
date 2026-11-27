@@ -9,6 +9,26 @@ const api = axios.create({
   timeout: 15000,
 })
 
+let refreshPromise: Promise<string> | null = null
+
+export const refreshAccessToken = (): Promise<string> => {
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post<{ data?: { accessToken?: string } }>('/auth/refresh')
+      .then(({ data }) => {
+        const accessToken = data.data?.accessToken
+        if (!accessToken) {
+          throw new Error('The refresh response did not include an access token')
+        }
+        return accessToken
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
 // ─── Token Refresh Logic ───────────────────────────────────────────────────────
 let isRefreshing = false
 let failedQueue: Array<{
@@ -51,7 +71,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        await api.post('/auth/refresh')
+        await refreshAccessToken()
         processQueue(null)
         return api(originalRequest)
       } catch (refreshError) {

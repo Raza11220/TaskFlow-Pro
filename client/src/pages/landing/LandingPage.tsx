@@ -38,14 +38,6 @@ export const LandingPage: React.FC = () => {
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/login')}
-            className="rounded-full px-3 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-sky-500/10 hover:text-[#0284C7] sm:px-4"
-          >
-            Sign in
-          </Button>
-          <Button
             size="sm"
             onClick={() => navigate('/login')}
             className="rounded-full bg-[#0284C7] px-3 text-xs font-semibold text-white shadow-sm shadow-[#0284C7]/30 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0369A1] hover:shadow-md hover:shadow-[#0284C7]/30 sm:px-4"
