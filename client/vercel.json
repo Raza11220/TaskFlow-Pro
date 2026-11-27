@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://taskflow-pro-api.vercel.app/api/:path*"
+      "destination": "https://task-flow-pro-mauve.vercel.app/api/:path*"
     },
     {
       "source": "/(.*)",
